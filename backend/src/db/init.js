@@ -11,7 +11,9 @@ const DB_PATH = path.join(DB_DIR, 'logilink.db');
 export async function initDatabase() {
   try {
     // Ensure data directory exists
-    await fs.mkdir(DB_DIR, { recursive: true });
+    const dbDir = path.dirname(DB_PATH);
+    await fs.mkdir(dbDir, { recursive: true });
+    console.log(`Database path: ${DB_PATH}`);
 
     return new Promise((resolve, reject) => {
       const db = new sqlite3.Database(DB_PATH, (err) => {
@@ -34,7 +36,7 @@ export async function initDatabase() {
               return;
             }
 
-            console.log('✓ Database initialized successfully at:', DB_PATH);
+            console.log('✓ Database schema created successfully');
             db.close((err) => {
               if (err) {
                 reject(err);

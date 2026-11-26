@@ -42,8 +42,9 @@ async function sendGupshupMessage(phoneNumber, message) {
     const response = await axios.post(url, payload, {
       headers: {
         Authorization: `apiKey ${apiKey}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
+      data: new URLSearchParams(payload).toString(),
     });
 
     console.log(`✓ WhatsApp message sent to ${phoneNumber} via Gupshup`);
