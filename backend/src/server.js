@@ -55,6 +55,17 @@ async function startServer() {
     // Initialize database
     console.log('📦 Initializing database...');
     try {
+      // Delete old database if it exists (force recreate)
+      const { promises: fs } = await import('fs');
+      const path = await import('path');
+      const dbPath = process.env.DATABASE_PATH || './data/logilink.db';
+      try {
+        await fs.unlink(dbPath);
+        console.log('🔄 Removed old database, recreating...');
+      } catch (e) {
+        // File doesn't exist, that's OK
+      }
+      
       await initDatabase();
       console.log('✓ Database initialized successfully');
     } catch (dbError) {
