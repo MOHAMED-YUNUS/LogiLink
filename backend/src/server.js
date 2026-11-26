@@ -60,16 +60,20 @@ async function startServer() {
     console.log('🌱 Seeding database...');
     await seedDatabase();
 
-    // Check AI health
+    // Check AI health (non-blocking - server starts even if AI is down)
     console.log('🤖 Checking AI service...');
-    const aiHealth = await checkAIHealth();
-    if (aiHealth.healthy) {
-      console.log(`✓ AI Service: ${aiHealth.provider.toUpperCase()} - Model: ${aiHealth.model}`);
-    } else {
-      console.warn(`⚠ AI Service Issue: ${aiHealth.error}`);
-      if (aiHealth.instructions) {
-        console.warn(`\n${aiHealth.instructions}\n`);
+    try {
+      const aiHealth = await checkAIHealth();
+      if (aiHealth.healthy) {
+        console.log(`✓ AI Service: ${aiHealth.provider.toUpperCase()} - Model: ${aiHealth.model}`);
+      } else {
+        console.warn(`⚠ AI Service Issue: ${aiHealth.error}`);
+        if (aiHealth.instructions) {
+          console.warn(`\n${aiHealth.instructions}\n`);
+        }
       }
+    } catch (aiError) {
+      console.warn(`⚠ AI Service check failed (non-blocking): ${aiError.message}`);
     }
 
     // Check WhatsApp configuration
