@@ -5,7 +5,10 @@ import { promises as fs } from 'fs';
 import { SCHEMA } from './schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, '../../data/logilink.db');
+// Use /tmp on Render (read-write), or ./data locally
+const DB_PATH = process.env.DATABASE_PATH || (process.env.NODE_ENV === 'production' 
+  ? '/tmp/logilink.db' 
+  : path.join(__dirname, '../../data/logilink.db'));
 
 let db = null;
 let initPromise = null;
