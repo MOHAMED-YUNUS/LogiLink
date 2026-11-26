@@ -114,8 +114,19 @@ router.post('/webhook', async (req, res) => {
 router.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    provider: process.env.WHATSAPP_API_PROVIDER || 'meta',
-    configured: !!process.env.WHATSAPP_API_TOKEN,
+    provider: process.env.WHATSAPP_API_PROVIDER || 'gupshup',
+    configured: !!process.env.GUPSHUP_API_KEY,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Test endpoint to verify webhook is reachable
+router.get('/test', (req, res) => {
+  console.log('✓ WhatsApp webhook test endpoint called');
+  res.json({ 
+    success: true, 
+    message: 'Webhook is reachable',
+    timestamp: new Date().toISOString(),
   });
 });
 
