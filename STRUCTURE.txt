@@ -1,0 +1,360 @@
+LogiLink Project Structure
+========================
+
+Logistic Chatbot/
+│
+├── backend/
+│   ├── src/
+│   │   ├── server.js                              [Main Express server]
+│   │   ├── db/
+│   │   │   ├── schema.js                          [Database schema definition]
+│   │   │   ├── connection.js                      [Database utilities]
+│   │   │   ├── init.js                            [Database initialization]
+│   │   │   ├── seed.js                            [Sample data]
+│   │   │   └── knowledge-base.js                  [FAQ & business info]
+│   │   ├── services/
+│   │   │   ├── ai-service.js                      [AI integration: Ollama/OpenAI]
+│   │   │   ├── whatsapp-service.js                [WhatsApp API communication]
+│   │   │   ├── message-handler.js                 [Message processing & state]
+│   │   │   ├── chat-service.js                    [Conversation management]
+│   │   │   ├── shipment-service.js                [Shipment logic & matching]
+│   │   │   ├── vendor-service.js                  [Vendor management]
+│   │   │   └── seller-service.js                  [Seller management]
+│   │   └── routes/
+│   │       └── whatsapp.js                        [WhatsApp webhook routes]
+│   ├── package.json                               [Node dependencies]
+│   └── data/
+│       └── logilink.db                            [SQLite database - auto-created]
+│
+├── .env.example                                   [Environment variable template]
+├── .gitignore                                     [Git ignore rules]
+├── README.md                                      [Full documentation]
+├── SETUP_GUIDE.md                                 [Step-by-step setup]
+├── QUICKSTART.md                                  [5-minute quick reference]
+├── PROJECT_SUMMARY.md                             [Project overview]
+└── STRUCTURE.txt                                  [This file]
+
+
+Key Files Description
+====================
+
+Backend Files:
+
+server.js
+  - Express application entry point
+  - Sets up middleware and routes
+  - Initializes database and AI
+  - Starts HTTP server on port 5000
+  - Logs startup information
+
+src/db/schema.js
+  - Defines all database tables
+  - SQLite schema for:
+    * users, sellers, vendors
+    * shipments, quotations
+    * conversations, messages
+    * knowledge_base
+    * shipment_activities
+
+src/db/connection.js
+  - SQLite connection management
+  - Provides promisified query methods
+  - Database lifecycle management
+
+src/db/init.js
+  - Initializes database on first run
+  - Creates data directory
+  - Executes schema
+  - Enables foreign keys
+
+src/db/seed.js
+  - Seeds database with FAQ entries
+  - Creates sample seller and vendor data
+  - Prevents duplicate seeding
+
+src/db/knowledge-base.js
+  - 24 Q&A pairs from requirements
+  - Business information constants
+  - Shipment status definitions
+
+src/services/ai-service.js
+  - Ollama integration (local AI, free)
+  - OpenAI integration (optional, paid)
+  - System prompt building
+  - Model health checks
+
+src/services/whatsapp-service.js
+  - Meta Cloud API integration
+  - Twilio integration (alternative)
+  - Message sending to WhatsApp
+  - Webhook verification
+  - Message extraction from webhook
+
+src/services/message-handler.js
+  - Main chatbot logic
+  - Stateful conversation flow
+  - User type identification
+  - Seller information collection
+  - Vendor information collection
+  - Response generation and delivery
+
+src/services/chat-service.js
+  - Conversation lifecycle
+  - User management
+  - Message storage
+  - Conversation history retrieval
+
+src/services/shipment-service.js
+  - Shipment creation
+  - Reference number generation
+  - Vendor matching algorithm
+  - Status tracking
+  - Activity logging
+
+src/services/vendor-service.js
+  - Vendor registration
+  - Quotation management
+  - Vendor queries
+
+src/services/seller-service.js
+  - Seller registration
+  - Seller queries
+
+src/routes/whatsapp.js
+  - GET /whatsapp/webhook - Verification
+  - POST /whatsapp/webhook - Message receiver
+  - GET /whatsapp/health - Status check
+
+Configuration Files:
+
+.env.example
+  - Template for environment variables
+  - Shows all required configurations
+  - Copy and edit to create .env
+
+package.json
+  - Node.js dependencies
+  - npm scripts (start, dev, db:init, db:seed)
+  - Engine requirements (Node 18+)
+
+Documentation Files:
+
+README.md
+  - Full feature documentation
+  - Architecture overview
+  - Deployment instructions
+  - Workflow diagrams
+
+SETUP_GUIDE.md
+  - Detailed step-by-step setup
+  - WhatsApp integration guide
+  - Testing instructions
+  - Production deployment guide
+  - Troubleshooting section
+
+QUICKSTART.md
+  - 5-minute quick reference
+  - Essential commands
+  - Common troubleshooting
+
+PROJECT_SUMMARY.md
+  - What was built
+  - Design decisions
+  - File structure details
+  - Next steps
+
+
+Database Schema
+==============
+
+users
+  - id (primary key)
+  - phone_number (unique)
+  - name
+  - user_type (seller, vendor, unknown)
+  - created_at, updated_at
+
+sellers
+  - id (primary key)
+  - user_id (foreign key to users)
+  - business_name
+  - business_address
+  - total_shipments
+  - created_at, updated_at
+
+vendors
+  - id (primary key)
+  - user_id (foreign key to users)
+  - company_name
+  - vehicle_type
+  - load_capacity_tonnes
+  - registration_number
+  - operating_locations
+  - operating_routes
+  - availability
+  - quotation_per_km
+  - base_quotation
+  - status
+  - created_at, updated_at
+
+shipments
+  - id (primary key)
+  - reference_number (unique)
+  - seller_id (foreign key)
+  - pickup_location
+  - delivery_location
+  - goods_description
+  - quantity
+  - weight_tonnes
+  - dimensions
+  - pickup_date, pickup_time
+  - vehicle_type_required
+  - special_requirements
+  - status
+  - assigned_vendor_id (foreign key)
+  - created_at, updated_at
+
+quotations
+  - id (primary key)
+  - shipment_id (foreign key)
+  - vendor_id (foreign key)
+  - amount
+  - currency
+  - validity_days
+  - notes
+  - status (pending, accepted, rejected)
+  - created_at, updated_at
+
+conversations
+  - id (primary key)
+  - user_id (foreign key)
+  - phone_number
+  - user_type
+  - shipment_id (foreign key, optional)
+  - status
+  - last_message_at
+  - created_at, updated_at
+
+messages
+  - id (primary key)
+  - conversation_id (foreign key)
+  - sender_type (user, bot, admin)
+  - sender_id
+  - message_text
+  - message_type
+  - metadata
+  - read_at
+  - created_at
+
+knowledge_base
+  - id (primary key)
+  - question
+  - answer
+  - category
+  - keywords
+  - created_at
+
+shipment_activities
+  - id (primary key)
+  - shipment_id (foreign key)
+  - activity_type
+  - description
+  - status_changed_to
+  - created_by
+  - created_at
+
+
+Environment Variables (.env)
+============================
+
+PORT=5000                              # Server port
+NODE_ENV=development                   # dev or production
+
+# AI Configuration
+AI_PROVIDER=ollama                     # ollama or openai
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=qwen2.5                   # or llama2, mistral, etc.
+
+# Optional: OpenAI
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-3.5-turbo
+
+# WhatsApp - Meta API
+WHATSAPP_API_PROVIDER=meta             # meta or twilio
+WHATSAPP_PHONE_NUMBER_ID=...
+WHATSAPP_BUSINESS_ACCOUNT_ID=...
+WHATSAPP_API_TOKEN=...
+WHATSAPP_WEBHOOK_VERIFY_TOKEN=...
+
+# Database
+DATABASE_PATH=./data/logilink.db
+
+# Chatbot
+CHATBOT_NAME=LogiLink
+CHATBOT_TIMEZONE=Asia/Kolkata
+LOG_LEVEL=debug
+
+
+How to Use
+==========
+
+1. Install dependencies:
+   cd backend
+   npm install
+
+2. Configure .env:
+   copy .env.example .env
+   Edit .env with your WhatsApp credentials
+
+3. Start services (3 terminals):
+   Terminal 1: ollama serve
+   Terminal 2: npm run dev
+   Terminal 3: ngrok http 5000
+
+4. Test WhatsApp webhook:
+   - Get ngrok URL
+   - Configure in Meta Dashboard
+   - Send test message
+
+5. Scale:
+   - Deploy to production
+   - Configure real WhatsApp number
+   - Use PostgreSQL database
+   - Add monitoring
+
+
+Status
+======
+
+✅ COMPLETE & READY TO USE
+
+The project is fully functional and can be:
+- Run locally for development
+- Tested with WhatsApp Business test numbers
+- Deployed to production servers
+- Integrated with real WhatsApp Business numbers
+
+No additional work needed to get started.
+
+
+Support & Documentation
+=======================
+
+README.md           - Feature overview & architecture
+SETUP_GUIDE.md      - Detailed step-by-step setup
+QUICKSTART.md       - 5-minute reference
+PROJECT_SUMMARY.md  - Project details & decisions
+STRUCTURE.txt       - This file
+
+
+Version
+=======
+
+LogiLink v1.0.0
+Built with:
+- Node.js 18+
+- Express.js
+- SQLite
+- Ollama (Local AI)
+- OpenAI API (Optional)
+- Meta WhatsApp Cloud API
