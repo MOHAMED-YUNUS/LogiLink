@@ -30,7 +30,7 @@ router.get('/webhook', (req, res) => {
   }
 });
 
-// Webhook message receiver (POST request from Meta or Gupshup)
+// Webhook message receiver (POST request from Meta, Gupshup, or API)
 router.post('/webhook', async (req, res) => {
   try {
     // Log incoming webhook
@@ -39,25 +39,44 @@ router.post('/webhook', async (req, res) => {
     const provider = process.env.WHATSAPP_API_PROVIDER || 'meta';
     console.log(`Provider: ${provider}`);
 
+    // Handle API format (custom format - what you're currently receiving)
+    if (req.body.type === 'message' && req.body.payload?.sender) {
+      console.log('🔄 Processing API format message...');
+      try {
+        const payload = req.body.payload;
+        const phoneNumber = payload.sender.phone;
+        const senderName = payload.sender.name || `User ${phoneNumber}`;
+        const messageText = payload.payload?.text || '';
+
+        if (messageText) {
+          console.log(`📩 Message from ${senderName} (${phoneNumber}): ${messageText}`);
+
+          // Process message asynchronously
+          processIncomingMessage(phoneNumber, senderName, messageText)
+            .catch(error => console.error('Error processing message:', error));
+        }
+
+        res.status(200).json({ success: true });
+      } catch (apiError) {
+        console.error('Error processing API message:', apiError);
+        res.status(200).json({ success: true });
+      }
+    }
     // Handle Gupshup format
-    if (provider === 'gupshup' || req.body.gs_app_id) {
+    else if (provider === 'gupshup' || req.body.gs_app_id) {
       console.log('🔄 Processing Gupshup webhook...');
       
-      // Gupshup sends messages differently
       if (req.body.message) {
         try {
           const message = req.body.message;
           console.log('✓ Gupshup message received:', message);
 
-          // Extract Gupshup message data
           const phoneNumber = message.mobile || message.sender;
           const messageText = message.text || message.payload?.text || '';
           const senderName = message.name || `User ${phoneNumber}`;
 
           if (messageText) {
             console.log(`📩 Message from ${senderName} (${phoneNumber}): ${messageText}`);
-
-            // Process message asynchronously
             processIncomingMessage(phoneNumber, senderName, messageText)
               .catch(error => console.error('Error processing message:', error));
           }
@@ -65,47 +84,37 @@ router.post('/webhook', async (req, res) => {
           res.status(200).json({ success: true });
         } catch (gupshupError) {
           console.error('Error processing Gupshup message:', gupshupError);
-          res.status(200).json({ success: true }); // Always 200 for webhook
+          res.status(200).json({ success: true });
         }
-      } else if (req.body.type === 'message-status-update') {
-        // Gupshup status update
-        console.log(`📌 Gupshup status update: ${req.body.status}`);
-        res.status(200).json({ success: true });
       } else {
         console.log('Other Gupshup event:', req.body);
         res.status(200).json({ success: true });
       }
     }
-    // Handle Meta format (original)
+    // Handle standard Meta format
     else if (req.body.entry?.[0]?.changes?.[0]?.value?.messages) {
       try {
-        // Extract message data
         const messageData = extractMessageData(req.body);
         console.log('✓ Message extracted:', messageData);
 
-        // Process message asynchronously
         processIncomingMessage(messageData.phoneNumber, messageData.senderName, messageData.messageText)
           .catch(error => console.error('Error processing message:', error));
 
-        // Respond immediately to Meta
         res.status(200).json({ success: true });
       } catch (extractError) {
         console.error('Error extracting message:', extractError);
-        res.status(200).json({ success: true }); // Always 200 for webhook
+        res.status(200).json({ success: true });
       }
     } else if (req.body.entry?.[0]?.changes?.[0]?.value?.statuses) {
-      // Handle message status updates (delivery, read, etc.)
       const status = req.body.entry[0].changes[0].value.statuses[0];
       console.log(`📌 Message status: ${status.status} - ${status.id}`);
       res.status(200).json({ success: true });
     } else {
-      // Other webhook events (e.g., account updates)
-      console.log('Other webhook event:', req.body.entry?.[0]?.changes?.[0]?.field);
+      console.log('Other webhook event:', req.body.entry?.[0]?.changes?.[0]?.field || req.body.type);
       res.status(200).json({ success: true });
     }
   } catch (error) {
     console.error('Error processing webhook:', error);
-    // Always return 200 to acknowledge receipt
     res.status(200).json({ success: true });
   }
 });
