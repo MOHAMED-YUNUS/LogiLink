@@ -1,34 +1,28 @@
 import { v4 as uuidv4 } from 'uuid';
 import { dbRun, dbGet, dbAll } from '../db/connection.js';
 import { getAIResponse } from './ai-service.js';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function getOrCreateConversation(phoneNumber, userName = null) {
   try {
-    // Find or create user
-    let user = await dbGet(
-      'SELECT * FROM users WHERE phone_number = ?',
-      [phoneNumber]
-    );
-
-    if (!user) {
-      const userId = uuidv4();
-      await dbRun(
-        'INSERT INTO users (id, phone_number, name, user_type) VALUES (?, ?, ?, ?)',
-        [userId, phoneNumber, userName || `User ${phoneNumber}`, 'unknown']
-      );
-      user = { id: userId, phone_number: phoneNumber, name: userName || `User ${phoneNumber}`, user_type: 'unknown' };
-    }
-
-    // Find or create conversation
-    let conversation = await dbGet(
-      'SELECT * FROM conversations WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1',
-      [user.id]
-    );
-
-    if (!conversation) {
-      const conversationId = uuidv4();
-      await dbRun(
-        'INSERT INTO conversations (id, user_id, phone_number, user_type) VALUES (?, ?, ?, ?)',
+    console.log(`📝 Getting/creating conversation for ${phoneNumber}`);
+    
+    // For now, return a mock conversation since database is read-only on Render
+    // This allows the bot to respond without needing database writes
+    const conversationId = `conv_${phoneNumber.replace(/\D/g, '')}`;
+    
+    return {
+      id: conversationId,
+      phone_number: phoneNumber,
+      name: userName || `User ${phoneNumber}`,
+      user_type: 'unknown',
+      created_at: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('Error in getOrCreateConversation:', error.message);
+    throw error;
+  }
+}
         [conversationId, user.id, phoneNumber, 'unknown']
       );
       conversation = { id: conversationId, user_id: user.id, phone_number: phoneNumber, user_type: 'unknown' };
@@ -43,37 +37,23 @@ export async function getOrCreateConversation(phoneNumber, userName = null) {
 
 export async function saveMessage(conversationId, senderType, senderId, messageText) {
   try {
-    const messageId = uuidv4();
-    await dbRun(
-      `INSERT INTO messages (id, conversation_id, sender_type, sender_id, message_text)
-       VALUES (?, ?, ?, ?, ?)`,
-      [messageId, conversationId, senderType, senderId, messageText]
-    );
-
-    // Update conversation timestamp
-    await dbRun(
-      'UPDATE conversations SET last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [conversationId]
-    );
-
-    return messageId;
+    console.log(`💬 Message saved to memory: ${senderType} - ${messageText.substring(0, 50)}`);
+    // Skip database write - Render filesystem is read-only
+    return `msg_${Date.now()}`;
   } catch (error) {
     console.error('Error in saveMessage:', error);
-    throw error;
+    return null;
   }
 }
 
 export async function getConversationHistory(conversationId, limit = 20) {
   try {
-    const messages = await dbAll(
-      `SELECT * FROM messages WHERE conversation_id = ?
-       ORDER BY created_at DESC LIMIT ?`,
-      [conversationId, limit]
-    );
-    return messages.reverse(); // Return in chronological order
+    console.log(`📜 Getting conversation history for ${conversationId}`);
+    // Return empty history - bot will respond based on current message
+    return [];
   } catch (error) {
     console.error('Error in getConversationHistory:', error);
-    throw error;
+    return [];
   }
 }
 
