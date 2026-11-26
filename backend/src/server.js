@@ -54,11 +54,26 @@ async function startServer() {
 
     // Initialize database
     console.log('📦 Initializing database...');
-    await initDatabase();
+    try {
+      await initDatabase();
+      console.log('✓ Database initialized successfully');
+    } catch (dbError) {
+      console.error('✗ Database initialization error:', dbError.message);
+      throw dbError;
+    }
 
-    // Seed database
+    // Seed database (non-blocking with timeout)
     console.log('🌱 Seeding database...');
-    await seedDatabase();
+    try {
+      const seedPromise = seedDatabase();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Seed database timeout')), 5000)
+      );
+      await Promise.race([seedPromise, timeoutPromise]);
+      console.log('✓ Database seeded successfully');
+    } catch (seedError) {
+      console.warn('⚠ Database seeding warning (non-blocking):', seedError.message);
+    }
 
     // Check AI health (non-blocking - server starts even if AI is down)
     console.log('🤖 Checking AI service...');
@@ -78,27 +93,29 @@ async function startServer() {
 
     // Check WhatsApp configuration
     console.log('📱 WhatsApp Configuration:');
-    const provider = process.env.WHATSAPP_API_PROVIDER || 'meta';
-    const hasToken = !!process.env.WHATSAPP_API_TOKEN;
+    const provider = process.env.WHATSAPP_API_PROVIDER || 'gupshup';
+    const hasGupshupKey = !!process.env.GUPSHUP_API_KEY;
+    const hasMetaToken = !!process.env.WHATSAPP_API_TOKEN;
     console.log(`   Provider: ${provider}`);
-    console.log(`   API Token: ${hasToken ? '✓ Configured' : '✗ Not configured'}`);
+    console.log(`   Gupshup Key: ${hasGupshupKey ? '✓ Configured' : '✗ Not configured'}`);
+    console.log(`   Meta Token: ${hasMetaToken ? '✓ Configured' : '✗ Not configured'}`);
 
-    if (!hasToken) {
-      console.warn(`\n⚠️  WARNING: WhatsApp API token not configured.`);
-      console.warn(`   Update .env with WHATSAPP_API_TOKEN to enable WhatsApp integration.`);
-      console.warn(`   Testing mode: chatbot will process messages but cannot send WhatsApp replies.\n`);
+    if (!hasGupshupKey && !hasMetaToken) {
+      console.warn(`\n⚠️  WARNING: WhatsApp API credentials not configured.`);
+      console.warn(`   Update .env with Gupshup or Meta credentials to enable WhatsApp integration.\n`);
     }
 
     // Start server
-    app.listen(PORT, () => {
-      console.log(`\n✓ Server running on http://localhost:${PORT}`);
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`\n✓ Server running on http://0.0.0.0:${PORT}`);
       console.log('\nWhatsApp Webhook Endpoints:');
       console.log('  - GET  /whatsapp/webhook (verification)');
       console.log('  - POST /whatsapp/webhook (message receiver)');
       console.log('  - GET  /whatsapp/health (status check)\n');
-      console.log('To test locally, use ngrok: ngrok http 5000');
-      console.log('Then configure webhook URL in Meta: https://your-ngrok-url.ngrok.io/whatsapp/webhook\n');
     });
+
+    // Set server timeout
+    server.setTimeout(30000);
 
     // Graceful shutdown
     process.on('SIGINT', async () => {
@@ -107,10 +124,27 @@ async function startServer() {
       console.log('✓ Database connection closed');
       process.exit(0);
     });
+
+    // Handle unhandled errors
+    process.on('uncaughtException', (error) => {
+      console.error('❌ Uncaught Exception:', error);
+      process.exit(1);
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+      process.exit(1);
+    });
   } catch (error) {
     console.error('✗ Failed to start server:', error.message);
+    console.error('Full error:', error);
     process.exit(1);
   }
 }
 
-startServer();
+// Start server immediately
+console.log('Starting LogiLink server...');
+startServer().catch(error => {
+  console.error('Fatal error during startup:', error);
+  process.exit(1);
+});

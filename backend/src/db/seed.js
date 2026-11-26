@@ -1,4 +1,4 @@
-import { dbRun } from './connection.js';
+import { dbRun, dbGet } from './connection.js';
 import { FAQ_DATABASE } from './knowledge-base.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -7,7 +7,6 @@ export async function seedDatabase() {
     console.log('Starting database seed...');
 
     // Check if FAQ already seeded
-    const { dbGet } = await import('./connection.js');
     const existing = await dbGet('SELECT COUNT(*) as count FROM knowledge_base');
 
     if (existing && existing.count > 0) {
