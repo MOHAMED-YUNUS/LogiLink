@@ -1,53 +1,15 @@
-import sqlite3 from 'sqlite3';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { getDatabase } from './connection.js';
 import { SCHEMA } from './schema.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_DIR = path.join(__dirname, '../../data');
-const DB_PATH = path.join(DB_DIR, 'logilink.db');
 
 export async function initDatabase() {
   try {
-    // Ensure data directory exists
-    const dbDir = path.dirname(DB_PATH);
-    await fs.mkdir(dbDir, { recursive: true });
-    console.log(`Database path: ${DB_PATH}`);
-
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(DB_PATH, (err) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-
-        // Enable foreign keys
-        db.run('PRAGMA foreign_keys = ON', (err) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-
-          // Execute schema
-          db.exec(SCHEMA, (err) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-
-            console.log('✓ Database schema created successfully');
-            db.close((err) => {
-              if (err) {
-                reject(err);
-              } else {
-                resolve(DB_PATH);
-              }
-            });
-          });
-        });
-      });
-    });
+    console.log('Database initialization triggered from server.js');
+    // Database is already initialized in connection.js
+    // This is just a safety check
+    const db = getDatabase();
+    if (db) {
+      console.log('✓ Database already initialized');
+    }
   } catch (error) {
     console.error('✗ Database initialization failed:', error.message);
     throw error;

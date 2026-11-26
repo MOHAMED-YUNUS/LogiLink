@@ -32,19 +32,18 @@ async function sendGupshupMessage(phoneNumber, message) {
 
   const url = `https://api.gupshup.io/wa/api/v1/msg`;
 
-  const payload = {
-    to: cleanPhoneNumber,
-    type: 'text',
-    text: message,
-  };
-
   try {
-    const response = await axios.post(url, payload, {
+    // Use form-urlencoded format
+    const params = new URLSearchParams();
+    params.append('to', cleanPhoneNumber);
+    params.append('type', 'text');
+    params.append('text', message);
+
+    const response = await axios.post(url, params.toString(), {
       headers: {
-        Authorization: `apiKey ${apiKey}`,
+        'Authorization': `apiKey ${apiKey}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      data: new URLSearchParams(payload).toString(),
     });
 
     console.log(`✓ WhatsApp message sent to ${phoneNumber} via Gupshup`);
