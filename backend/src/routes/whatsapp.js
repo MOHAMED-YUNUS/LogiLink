@@ -30,14 +30,54 @@ router.get('/webhook', (req, res) => {
   }
 });
 
-// Webhook message receiver (POST request from Meta)
+// Webhook message receiver (POST request from Meta or Gupshup)
 router.post('/webhook', async (req, res) => {
   try {
     // Log incoming webhook
     console.log('📨 Incoming webhook:', JSON.stringify(req.body, null, 2));
 
-    // Check if it's a message event
-    if (req.body.entry?.[0]?.changes?.[0]?.value?.messages) {
+    const provider = process.env.WHATSAPP_API_PROVIDER || 'meta';
+    console.log(`Provider: ${provider}`);
+
+    // Handle Gupshup format
+    if (provider === 'gupshup' || req.body.gs_app_id) {
+      console.log('🔄 Processing Gupshup webhook...');
+      
+      // Gupshup sends messages differently
+      if (req.body.message) {
+        try {
+          const message = req.body.message;
+          console.log('✓ Gupshup message received:', message);
+
+          // Extract Gupshup message data
+          const phoneNumber = message.mobile || message.sender;
+          const messageText = message.text || message.payload?.text || '';
+          const senderName = message.name || `User ${phoneNumber}`;
+
+          if (messageText) {
+            console.log(`📩 Message from ${senderName} (${phoneNumber}): ${messageText}`);
+
+            // Process message asynchronously
+            processIncomingMessage(phoneNumber, senderName, messageText)
+              .catch(error => console.error('Error processing message:', error));
+          }
+
+          res.status(200).json({ success: true });
+        } catch (gupshupError) {
+          console.error('Error processing Gupshup message:', gupshupError);
+          res.status(200).json({ success: true }); // Always 200 for webhook
+        }
+      } else if (req.body.type === 'message-status-update') {
+        // Gupshup status update
+        console.log(`📌 Gupshup status update: ${req.body.status}`);
+        res.status(200).json({ success: true });
+      } else {
+        console.log('Other Gupshup event:', req.body);
+        res.status(200).json({ success: true });
+      }
+    }
+    // Handle Meta format (original)
+    else if (req.body.entry?.[0]?.changes?.[0]?.value?.messages) {
       try {
         // Extract message data
         const messageData = extractMessageData(req.body);
@@ -51,7 +91,7 @@ router.post('/webhook', async (req, res) => {
         res.status(200).json({ success: true });
       } catch (extractError) {
         console.error('Error extracting message:', extractError);
-        res.status(400).json({ error: 'Invalid message format' });
+        res.status(200).json({ success: true }); // Always 200 for webhook
       }
     } else if (req.body.entry?.[0]?.changes?.[0]?.value?.statuses) {
       // Handle message status updates (delivery, read, etc.)
@@ -65,8 +105,8 @@ router.post('/webhook', async (req, res) => {
     }
   } catch (error) {
     console.error('Error processing webhook:', error);
-    // Always return 200 to acknowledge receipt to Meta
-    res.status(200).json({ error: error.message });
+    // Always return 200 to acknowledge receipt
+    res.status(200).json({ success: true });
   }
 });
 
