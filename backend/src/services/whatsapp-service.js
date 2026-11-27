@@ -21,22 +21,44 @@ export async function sendWhatsAppMessage(phoneNumber, message) {
 
 async function sendGupshupMessage(phoneNumber, message) {
   const apiKey = process.env.GUPSHUP_API_KEY;
+  const sourcePhone = process.env.GUPSHUP_PHONE_NUMBER;
 
-  if (!apiKey) {
-    console.warn('⚠ No Gupshup API key - bot will respond in logs only');
-    return { success: true, logged: true };
+  if (!apiKey || !sourcePhone) {
+    console.warn('⚠ Gupshup config incomplete - API_KEY or PHONE_NUMBER missing');
+    return { success: false };
   }
 
   const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
 
   try {
-    console.log(`📤 [DEMO MODE] Would send to ${cleanPhoneNumber}:`);
-    console.log(`   "${message}"`);
-    console.log(`✓ Message ready to send (requires Gupshup API fix)`);
-    return { success: true, demoMode: true };
+    console.log(`📤 Sending Gupshup message to ${cleanPhoneNumber}...`);
+    
+    // Gupshup requires these specific parameters and header format
+    const formData = new URLSearchParams();
+    formData.append('channel', 'whatsapp');
+    formData.append('source', sourcePhone);
+    formData.append('destination', cleanPhoneNumber);
+    formData.append('message', JSON.stringify({
+      type: 'text',
+      text: message
+    }));
+
+    const response = await axios.post(
+      'https://api.gupshup.io/wa/api/v1/msg',
+      formData.toString(),
+      {
+        headers: {
+          'apikey': apiKey,  // ✅ CRITICAL: lowercase 'apikey', not 'Authorization'
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      }
+    );
+
+    console.log(`✓ WhatsApp message sent successfully to ${phoneNumber}`);
+    return response.data;
   } catch (error) {
-    console.error('Error:', error.message);
-    return { success: true, demoMode: true };
+    console.error('Gupshup API error:', error.response?.status, error.response?.data?.message || error.message);
+    throw new Error(`Failed to send: ${error.response?.data?.message || error.message}`);
   }
 }
 
