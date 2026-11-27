@@ -32,6 +32,8 @@ async function sendGupshupMessage(phoneNumber, message) {
 
   try {
     console.log(`📤 Sending Gupshup message to ${cleanPhoneNumber}...`);
+    console.log(`   From: ${sourcePhone}`);
+    console.log(`   Message: "${message}"`);
     
     // Gupshup requires these specific parameters and header format
     const formData = new URLSearchParams();
@@ -43,21 +45,29 @@ async function sendGupshupMessage(phoneNumber, message) {
       text: message
     }));
 
+    console.log(`📋 Request details:`);
+    console.log(`   URL: https://api.gupshup.io/wa/api/v1/msg`);
+    console.log(`   Header: apikey=${apiKey.substring(0, 10)}...`);
+    console.log(`   FormData: ${formData.toString()}`);
+
     const response = await axios.post(
       'https://api.gupshup.io/wa/api/v1/msg',
       formData.toString(),
       {
         headers: {
-          'apikey': apiKey,  // ✅ CRITICAL: lowercase 'apikey', not 'Authorization'
+          'apikey': apiKey,
           'Content-Type': 'application/x-www-form-urlencoded',
         },
       }
     );
 
     console.log(`✓ WhatsApp message sent successfully to ${phoneNumber}`);
+    console.log(`   Response:`, JSON.stringify(response.data));
     return response.data;
   } catch (error) {
-    console.error('Gupshup API error:', error.response?.status, error.response?.data?.message || error.message);
+    console.error('❌ Gupshup API error:', error.response?.status);
+    console.error('   Error data:', error.response?.data);
+    console.error('   Message:', error.message);
     throw new Error(`Failed to send: ${error.response?.data?.message || error.message}`);
   }
 }
