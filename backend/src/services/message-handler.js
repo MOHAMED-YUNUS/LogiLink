@@ -13,12 +13,12 @@ export async function processIncomingMessage(phoneNumber, senderName, messageTex
     console.log(`📱 Incoming message from ${phoneNumber}: "${messageText}"`);
 
     // Get or create conversation
-    const { user, conversation } = await getOrCreateConversation(phoneNumber, senderName);
+    const conversation = await getOrCreateConversation(phoneNumber, senderName);
 
     // Get conversation state
     let state = conversationStates.get(conversation.id) || {
       conversationId: conversation.id,
-      userId: user.id,
+      userId: phoneNumber,
       userType: conversation.user_type,
       collectingInfo: null,
       collectedData: {},

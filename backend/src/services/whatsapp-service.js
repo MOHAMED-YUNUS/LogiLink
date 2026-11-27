@@ -21,68 +21,40 @@ export async function sendWhatsAppMessage(phoneNumber, message) {
 
 async function sendGupshupMessage(phoneNumber, message) {
   const apiKey = process.env.GUPSHUP_API_KEY;
-  const appId = process.env.GUPSHUP_APP_ID;
 
-  if (!apiKey || !appId) {
-    console.warn('⚠ Gupshup config missing, logging instead of sending');
+  if (!apiKey) {
+    console.warn('⚠ Gupshup API key missing, logging instead');
     console.log(`📤 Would send to ${phoneNumber}: ${message}`);
-    return { success: true, message: 'Logged (no credentials)' };
+    return { success: true };
   }
 
-  // Normalize phone number
   const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
 
   try {
-    // Try the correct Gupshup WhatsApp API endpoint
-    const url = `https://api.gupshup.io/wa/api/v1/msg`;
+    console.log(`📤 Sending Gupshup message to ${cleanPhoneNumber}...`);
+    
+    // Gupshup WhatsApp API expects form-urlencoded data
+    const formData = new URLSearchParams();
+    formData.append('to', cleanPhoneNumber);
+    formData.append('type', 'text');
+    formData.append('text', message);
 
-    const response = await axios.post(url, 
-      {
-        to: cleanPhoneNumber,
-        type: 'text',
-        text: message,
-      },
+    const response = await axios.post(
+      'https://api.gupshup.io/wa/api/v1/msg',
+      formData.toString(),
       {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+          'Authorization': `apiKey ${apiKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
       }
     );
 
-    console.log(`✓ WhatsApp message sent to ${phoneNumber} via Gupshup`);
+    console.log(`✓ WhatsApp message sent to ${phoneNumber}`);
     return response.data;
   } catch (error) {
-    // If Bearer fails, try with apiKey format
-    if (error.response?.status === 401) {
-      console.warn('⚠ Bearer auth failed, trying apiKey format...');
-      
-      try {
-        const response = await axios.post(url, 
-          {
-            to: cleanPhoneNumber,
-            type: 'text',
-            text: message,
-          },
-          {
-            headers: {
-              'api-key': apiKey,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-        console.log(`✓ WhatsApp message sent with api-key header`);
-        return response.data;
-      } catch (err2) {
-        console.error('Both auth methods failed:', err2.message);
-        throw err2;
-      }
-    }
-
-    console.error('Gupshup API error:', error.response?.data || error.message);
-    throw new Error(
-      `Failed to send WhatsApp message: ${error.response?.data?.message || error.message}`
-    );
+    console.error('Gupshup API error:', error.response?.status, error.response?.data || error.message);
+    throw new Error(`Failed to send WhatsApp message: ${error.message}`);
   }
 }
 
