@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { dbRun, dbGet, dbAll } from '../db/connection.js';
 import { getAIResponse } from './ai-service.js';
-import { v4 as uuidv4 } from 'uuid';
 
 export async function getOrCreateConversation(phoneNumber, userName = null) {
   try {
